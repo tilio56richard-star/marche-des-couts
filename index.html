@@ -353,7 +353,7 @@ const ROUNDS = [
 
 /* ===================== État ===================== */
 const S = {
-  mode: "loading", fb: null, authUser: null, connected: false, isOwner: false, writeBlocked: false,
+  mode: "loading", fb: null, authUser: null, connected: false, isOwner: false, writeBlocked: false, players: {},
   state: null, actions: {}, loaded: false, note: null, myTeam: null, view: "equipe",
   bidDraft: "", nameDraft: "", renaming: false, resetArm: false, built: null
 };
@@ -371,6 +371,26 @@ function teamName(t){
   const g = G();
   if (g){ const a = S.actions[`${g.gid}-name-t${t}`]; if (a && a.gid === g.gid && a.kind === "name" && a.name) return String(a.name).slice(0, 30); }
   return (g && g.teams && g.teams[t]) || ("Équipe " + (t + 1));
+}
+function serverTeam(){
+  const g = G(); if (!g || !S.authUser) return null;
+  const v = S.players && S.players[g.gid] && S.players[g.gid][S.authUser.uid];
+  return typeof v === "number" ? v : null;
+}
+function playersCount(t){
+  const g = G(); if (!g || !S.players || !S.players[g.gid]) return 0;
+  return Object.values(S.players[g.gid]).filter(v => v === t).length;
+}
+function lockedPlayer(){ return S.mode === "live" && !S.isOwner; }
+function joinTeam(t){
+  const g = G(); if (!g || !S.authUser) { toast("Connexion en cours, réessaie dans un instant."); return; }
+  if (serverTeam() !== null && gameStarted()){ toast("Impossible de changer d'équipe pendant la partie."); return; }
+  set(ref(S.fb.db, `players/${g.gid}/${S.authUser.uid}`), t).catch(() => toast("Impossible de changer d'équipe pendant la partie."));
+}
+function leaveTeam(){
+  const g = G(); if (!g || !S.authUser) return;
+  if (gameStarted()){ toast("Impossible de changer d'équipe pendant la partie."); return; }
+  remove(ref(S.fb.db, `players/${g.gid}/${S.authUser.uid}`)).catch(() => toast("Impossible de changer d'équipe pendant la partie."));
 }
 function gameStarted(){ const g = G(); return !!g && g.phase !== "lobby"; }
 function acts(){ const g = G(); if (!g) return []; return Object.values(S.actions).filter(a => a && a.gid === g.gid); }
@@ -547,7 +567,7 @@ function teamView(){
   let topReplaced = false;
   if (t === null){
     patch("tv-top", `<div class="card"><h2 style="font-size:30px">Choisissez votre équipe</h2>
-      <p class="muted" style="margin-top:6px">Un appareil par équipe suffit. Vous pourrez changer plus tard.</p>
+      <p class="muted" style="margin-top:6px">${gameStarted() ? "Attention : une fois choisie, l'équipe ne peut plus être changée pendant la partie." : "Un appareil par équipe suffit. Vous pourrez changer d'équipe jusqu'au lancement de la partie."}</p>
       <div class="pick">${[0,1,2,3].map(i => `<button data-act="pick" data-t="${i}" style="${teamStyle(i)}"><strong>${esc(teamName(i))}</strong><span class="num muted">${g ? fmt(capital(i)) : "1 000 €"}</span></button>`).join("")}</div></div>`);
   } else {
     const sw = isHost() ? `<div class="sw"><span class="muted" style="font-size:13px">Jouer pour :</span>${[0,1,2,3].map(i => `<button class="chip ${i === t ? "on" : ""}" style="${teamStyle(i)}" data-act="pick" data-t="${i}">${esc(teamName(i))}</button>`).join("")}</div>`
@@ -679,7 +699,7 @@ function hostView(){
     patch("an-teams", ""); document.getElementById("an-key").hidden = true; document.getElementById("an-names").hidden = true; return;
   }
   let main = "", status = "";
-  if (g.phase === "lobby"){ status = "Avant-match : les équipes choisissent leur appareil."; main = `<button class="btn" data-act="start">Lancer la manche 1</button>`; }
+  if (g.phase === "lobby"){ status = "Avant-match : les équipes choisissent leur appareil."; main = `<button class="btn" data-act="start">Lancer la manche 1</button><span class="muted" style="font-size:14px">Appareils inscrits : ${[0,1,2,3].map(i => `${esc(teamName(i))} ${playersCount(i)}`).join(" · ")}</span>`; }
   else if (g.phase === "play"){ status = `Manche ${g.round + 1} / ${ROUNDS.length} en cours : ${ROUNDS[g.round].title}`; main = `<button class="btn" data-act="reveal">Révéler les résultats</button>`; }
   else if (g.phase === "reveal"){ status = `Résultats de la manche ${g.round + 1} affichés.`; main = g.round + 1 < ROUNDS.length ? `<button class="btn" data-act="next">Lancer la manche ${g.round + 2}</button>` : `<button class="btn" data-act="next">Afficher le classement final</button>`; }
   else { status = "Partie terminée."; main = ""; }
@@ -714,6 +734,7 @@ function hostView(){
 
 /* ---------- Cadre ---------- */
 function render(){
+  if (lockedPlayer()) S.myTeam = serverTeam();
   const g = G();
   const dot = document.getElementById("dot");
   dot.className = "dot" + (S.mode === "live" && S.connected ? " on" : "");
@@ -727,7 +748,7 @@ function render(){
   document.getElementById("ticker").textContent = tk;
   document.getElementById("mode").textContent = S.mode === "live" ? "En direct" : S.mode === "local" ? "Un seul écran" : "Connexion…";
   const links = [["equipe", "Équipe"], ["ecran", "Écran projeté"]];
-  if (isHost() || S.view === "animateur") links.push(["animateur", "Animateur"]);
+  if (isHost()) links.push(["animateur", "Animateur"]);
   const nav = links.map(([h, l]) => `<a href="#${h}" ${S.view === h ? 'aria-current="page"' : ""}>${l}</a>`).join("");
   const navEl = document.getElementById("nav"); if (navEl._html !== nav){ navEl._html = nav; navEl.innerHTML = nav; }
 
@@ -769,8 +790,16 @@ window.addEventListener("hashchange", route);
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-act]"); if (!b || b.disabled) return;
   const a = b.dataset.act; const g = G();
-  if (a === "pick"){ if (S.myTeam !== null && gameStarted() && !isHost()) return; S.renaming = false; S.myTeam = Number(b.dataset.t); S.bidDraft = ""; try { localStorage.setItem(TEAM_KEY, String(S.myTeam)); } catch(err){} render(); }
-  else if (a === "unpick"){ if (gameStarted() && !isHost()){ toast("Impossible de changer d'équipe pendant la partie."); return; } S.myTeam = null; try { localStorage.removeItem(TEAM_KEY); } catch(err){} render(); }
+  if (a === "pick"){
+    S.renaming = false; S.bidDraft = "";
+    if (lockedPlayer()){ joinTeam(Number(b.dataset.t)); return; }
+    S.myTeam = Number(b.dataset.t); try { localStorage.setItem(TEAM_KEY, String(S.myTeam)); } catch(err){} render();
+  }
+  else if (a === "unpick"){
+    if (lockedPlayer()){ leaveTeam(); return; }
+    if (gameStarted() && !isHost()){ toast("Impossible de changer d'équipe pendant la partie."); return; }
+    S.myTeam = null; try { localStorage.removeItem(TEAM_KEY); } catch(err){} render();
+  }
   else if (a === "buy") buy(b.dataset.k);
   else if (a === "decide") decide(b.dataset.k);
   else if (a === "bid") sendBid();
@@ -809,7 +838,7 @@ async function resetGame(){
   const names = [0,1,2,3].map(teamName);
   if (S.mode === "local"){ S.actions = {}; setState(newGame(names)); return; }
   setState(newGame(names));
-  try { await remove(ref(S.fb.db, "actions")); } catch(e){ handleErr(e, false); }
+  try { await remove(ref(S.fb.db, "actions")); await remove(ref(S.fb.db, "players")); } catch(e){ handleErr(e, false); }
 }
 async function login(){
   if (!S.fb) return;
@@ -850,6 +879,7 @@ function init(){
     clearTimeout(timer); if (S.note && S.note.startsWith("La partie ne répond")) S.note = null;
     S.loaded = true; S.state = s.val(); render();
   }, () => { clearTimeout(timer); S.loaded = true; S.note = "Lecture de la partie refusée : vérifie les règles de la base Firebase."; render(); });
+  onValue(ref(db, "players"), s => { S.players = s.val() || {}; render(); }, () => {});
   onValue(ref(db, "actions"), s => { S.actions = s.val() || {}; render(); }, () => { S.note = "Lecture des équipes refusée : vérifie les règles de la base Firebase."; render(); });
   S.built = null; render();
 }
