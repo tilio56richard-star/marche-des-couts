@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le Marché des coûts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout : bandeau de cotation en haut ; colonne de jeu + classement latéral ; l'écran projeté passe en plein cadre */
+  --bg:#eceeea;
+  --surface:#ffffff;
+  --ink:#16222a;
+  --muted:#5a686d;
+  --line:#d3d9d6;
+  --accent:#d9480f;
+  --up:#1b7a43;
+  --down:#bf3326;
+  --t0:#2560c4;
+  --t1:#7b3fd4;
+  --t2:#0d8573;
+  --t3:#b0741a;
+  --soft:#f5f6f3;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1417; --surface:#162026; --ink:#e6ecea; --muted:#93a2a6; --line:#2a373d; --accent:#ff7b45;
+    --up:#46c27c; --down:#ff6b5c; --t0:#6e9ffc; --t1:#ae85ff; --t2:#3fd0b7; --t3:#f1b552; --soft:#1b262c;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1417; --surface:#162026; --ink:#e6ecea; --muted:#93a2a6; --line:#2a373d; --accent:#ff7b45;
+  --up:#46c27c; --down:#ff6b5c; --t0:#6e9ffc; --t1:#ae85ff; --t2:#3fd0b7; --t3:#f1b552; --soft:#1b262c;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+h1,h2,h3{font-family:var(--display);font-stretch:85%;line-height:1.1;margin:0;text-wrap:balance}
+p{margin:0}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+a{color:inherit}
+
+/* Bandeau */
+.bar{position:sticky;top:0;z-index:5;background:var(--ink);color:var(--bg);display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px;padding:10px 20px}
+.brand{font-family:var(--display);font-weight:800;font-stretch:75%;font-size:22px;letter-spacing:.01em;text-transform:uppercase}
+.brand b{color:var(--accent)}
+.ticker{font-family:var(--mono);font-size:13px;display:flex;gap:10px;align-items:center;flex:1;min-width:220px;opacity:.92}
+.ticker .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.ticker .dot.on{background:var(--up);box-shadow:0 0 0 3px color-mix(in srgb,var(--up) 30%,transparent)}
+.nav{display:flex;gap:4px;flex-wrap:wrap}
+.nav a{text-decoration:none;font-size:14px;font-weight:500;padding:6px 12px;border-radius:999px;border:1px solid color-mix(in srgb,var(--bg) 25%,transparent)}
+.nav a[aria-current="page"]{background:var(--bg);color:var(--ink)}
+.mode{font-size:12px;font-family:var(--mono);padding:3px 8px;border-radius:4px;border:1px solid color-mix(in srgb,var(--bg) 35%,transparent)}
+
+.note{max-width:1200px;margin:12px auto 0;padding:0 20px}
+.note div{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);padding:10px 14px;border-radius:6px;font-size:14px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+main{max-width:1200px;margin:0 auto;padding:20px}
+
+/* Cartes */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px}
+.stack{display:grid;gap:16px}
+.cols{display:grid;gap:20px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:920px){.cols{grid-template-columns:minmax(0,1fr) 340px;align-items:start}.cols aside{position:sticky;top:76px}}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.lead{max-width:65ch;color:var(--ink)}
+.muted{color:var(--muted)}
+.free{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.free span{font-size:14px;background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:4px 10px}
+.free span b{font-family:var(--mono);font-weight:600}
+
+/* Équipe */
+.teamhead{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;border-left:6px solid var(--tc);}
+.teamhead h2{font-size:28px}
+.capbig{font-size:40px;font-weight:600;line-height:1}
+.sw{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer}
+.chip.on{background:var(--tc);border-color:var(--tc);color:#fff}
+.linkbtn{background:none;border:0;padding:0;text-decoration:underline;cursor:pointer;color:var(--muted);font-size:14px}
+.pick{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-top:16px}
+.pick button{text-align:left;border:2px solid var(--line);border-top:8px solid var(--tc);background:var(--surface);border-radius:10px;padding:16px;cursor:pointer}
+.pick button:hover{border-color:var(--tc)}
+.pick strong{display:block;font-family:var(--display);font-stretch:85%;font-size:22px}
+
+.market{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));margin-top:14px}
+.info{display:flex;flex-direction:column;gap:6px;text-align:left;border-radius:8px;padding:12px 14px;border:1px solid var(--line);background:var(--surface);min-height:104px}
+.info .lbl{font-size:14px;font-weight:500}
+.info .price{font-size:20px;font-weight:600;margin-top:auto}
+.info .cta{font-size:13px;color:var(--muted)}
+button.info{cursor:pointer;border-style:dashed;border-width:1.5px}
+button.info:hover:not(:disabled){border-color:var(--accent);border-style:solid}
+button.info:hover:not(:disabled) .cta{color:var(--accent)}
+button.info:disabled{cursor:not-allowed;opacity:.55}
+.info.got{background:var(--soft);border-left:4px solid var(--tc,var(--accent))}
+.info .val{font-family:var(--mono);font-size:15px;font-weight:600}
+.info .meta{font-size:12px;color:var(--muted);margin-top:auto}
+.info.trap{border-left-color:var(--down)}
+.info.trap .meta b{color:var(--down)}
+.info.seen{opacity:.75}
+
+.opts{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-top:14px}
+.opt{border:2px solid var(--line);background:var(--surface);border-radius:8px;padding:14px;font-weight:600;cursor:pointer;text-align:left}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt.on{border-color:var(--tc,var(--ink));background:color-mix(in srgb,var(--tc,var(--ink)) 12%,var(--surface))}
+.opt:disabled{cursor:not-allowed;opacity:.6}
+.hint{font-size:14px;color:var(--muted);margin-top:10px}
+.bidrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.bidrow input{width:150px;padding:10px 12px;border:2px solid var(--line);border-radius:8px;background:var(--surface);font-family:var(--mono);font-size:18px}
+.btn{border:0;border-radius:8px;padding:10px 16px;font-weight:600;cursor:pointer;background:var(--ink);color:var(--bg)}
+.btn.alt{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.btn.warn{background:var(--down);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.result{border-radius:8px;padding:14px 16px;margin-top:14px;background:var(--soft);border:1px solid var(--line)}
+.gain{font-family:var(--mono);font-weight:600}
+.gain.up{color:var(--up)} .gain.down{color:var(--down)}
+.corr{margin:12px 0 0;padding-left:20px;display:grid;gap:6px;max-width:72ch}
+.corr li{font-size:15px}
+
+/* Classement */
+.board{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:10px}
+.row{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:4px 10px;align-items:center}
+.row .rank{font-family:var(--mono);color:var(--muted);font-size:13px}
+.row .nm{font-weight:600;overflow-wrap:anywhere}
+.row .cap{font-weight:600;text-align:right}
+.row .barw{grid-column:2 / 4;height:8px;background:var(--soft);border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+.row .barw i{display:block;height:100%;background:var(--tc);transition:width .6s ease}
+.row .st{grid-column:2 / 4;font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.ok{color:var(--up);font-weight:600}
+.up{color:var(--up)} .down{color:var(--down)}
+
+/* Écran projeté */
+.proj{display:grid;gap:24px}
+.projhead{display:flex;flex-wrap:wrap;gap:16px 40px;align-items:end;justify-content:space-between}
+.projhead h1{font-size:clamp(34px,5vw,64px);font-weight:800;font-stretch:75%}
+.timer{font-family:var(--mono);font-size:clamp(40px,6vw,80px);font-weight:600;line-height:1}
+.timer.late{color:var(--down)}
+.proj .board{gap:22px}
+.proj .row{grid-template-columns:44px minmax(0,1fr) auto;gap:6px 18px}
+.proj .row .rank{font-size:24px}
+.proj .row .nm{font-family:var(--display);font-stretch:85%;font-size:clamp(24px,3vw,38px)}
+.proj .row .cap{font-size:clamp(26px,3.2vw,44px)}
+.proj .row .barw{height:18px;border-radius:9px}
+.proj .row .st{font-size:16px}
+.offers{display:grid;gap:8px;margin-top:12px}
+.offers div{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding:6px 0}
+
+/* Animateur */
+.ctrl{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
+.names{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-top:14px}
+.names label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+.names input{padding:9px 12px;border:2px solid var(--line);border-left:6px solid var(--tc);border-radius:8px;background:var(--surface);font-size:16px}
+.tbl{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+.tbl th,.tbl td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl th{font-size:12px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+.tw{overflow-x:auto}
+.sol{border-left:4px solid var(--up);padding-left:12px;margin-top:10px;font-weight:600}
+.rules{margin:12px 0 0;padding-left:20px;display:grid;gap:6px;max-width:68ch}
+.podium{display:grid;gap:10px;margin-top:14px}
+.podium div{display:flex;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:8px;border-left:6px solid var(--tc);background:var(--soft);font-size:18px}
+.podium div:first-child{font-size:24px;font-weight:600}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;max-width:min(90vw,520px);z-index:10}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand">Le Marché <b>des coûts</b></div>
+  <div class="ticker"><span class="dot" id="dot"></span><span id="ticker">Connexion à la partie…</span><span id="tick-timer" class="js-timer"></span></div>
+  <span class="mode" id="mode">…</span>
+  <nav class="nav" id="nav"></nav>
+</header>
+<div class="note" id="note"></div>
+<main id="app"></main>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script type="module">
+/* =====================================================================
+   CONFIGURATION À REMPLIR (voir le guide de mise en ligne)
+   1. Colle ici l'objet firebaseConfig donné par la console Firebase.
+   2. Mets l'identifiant (UID) du compte animateur créé dans Firebase.
+   ===================================================================== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAeZcY8t7Ml4pHNOt_S8XFmD9xYiM4BLn4",
+  authDomain: "marche-des-couts.firebaseapp.com",
+  databaseURL: "https://marche-des-couts-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "marche-des-couts",
+  storageBucket: "marche-des-couts.firebasestorage.app",
+  messagingSenderId: "363374191477",
+  appId: "1:363374191477:web:3a0725e1060d183ba2693c"
+};
+const ADMIN_UID = "HT70a6UvhRcK25IFWisqG0CHXX43";
+/* ===================================================================== */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+let OFFSET = 0;
+const now = () => Date.now() + OFFSET;
+
+/* ===================== Contenu du jeu ===================== */
+const START = 1000;
+const ROUNDS = [
+  {
+    title: "A ou B : quel produit lancer ?",
+    notion: "Seuil de rentabilité · coûts irrécupérables",
+    context: "Vélonova, fabricant d'accessoires de vélo, ne peut lancer qu'un seul nouveau produit cette année : l'antivol connecté A ou la sacoche premium B. Elle peut aussi ne rien lancer.",
+    free: [["Prix de vente A", "40 €"], ["Prix de vente B", "60 €"]],
+    infos: [
+      {k:"cvA", label:"Coût variable unitaire de A", price:10, value:"25 €"},
+      {k:"cvB", label:"Coût variable unitaire de B", price:10, value:"30 €"},
+      {k:"cfA", label:"Charges fixes de A", price:10, value:"90 000 €"},
+      {k:"cfB", label:"Charges fixes de B", price:10, value:"120 000 €"},
+      {k:"vA", label:"Prévision de ventes de A", price:20, value:"7 000 unités"},
+      {k:"vB", label:"Prévision de ventes de B", price:20, value:"3 500 unités"},
+      {k:"srA", label:"Seuil de rentabilité de A (synthèse)", price:30, value:"6 000 unités"},
+      {k:"srB", label:"Seuil de rentabilité de B (synthèse)", price:30, value:"4 000 unités"},
+      {k:"rdA", label:"R&D déjà dépensée pour A", price:15, value:"50 000 €", trap:"coût irrécupérable, payé quelle que soit la décision"},
+      {k:"rdB", label:"R&D déjà dépensée pour B", price:15, value:"10 000 €", trap:"coût irrécupérable, payé quelle que soit la décision"}
+    ],
+    type: "choice",
+    options: [
+      {k:"A", label:"Lancer A (antivol)", gain:200, result:"+15 000 €"},
+      {k:"B", label:"Lancer B (sacoche)", gain:-50, result:"−15 000 €"},
+      {k:"none", label:"Ne rien lancer", gain:-50, result:"0 €"}
+    ],
+    scale: "Barème : lancer A +200 € · lancer B ou ne rien lancer −50 € · pas de décision 0 €.",
+    solution: "Lancer A.",
+    correction: [
+      "A : marge sur coût variable = (40 − 25) × 7 000 = 105 000 €. Résultat = 105 000 − 90 000 = +15 000 €. Les ventes prévues (7 000) dépassent le seuil (6 000).",
+      "B : marge sur coût variable = (60 − 30) × 3 500 = 105 000 €. Résultat = 105 000 − 120 000 = −15 000 €. Les ventes (3 500) restent sous le seuil (4 000).",
+      "B a la meilleure marge unitaire, mais ne vend pas assez pour couvrir ses charges fixes.",
+      "La R&D déjà dépensée est un coût irrécupérable : elle ne doit pas peser dans le choix.",
+      "Le raccourci : seuil et prévision de ventes de A (50 €) suffisaient pour voir que A est rentable."
+    ]
+  },
+  {
+    title: "Commande spéciale",
+    notion: "Coût marginal · coût complet",
+    context: "Vélonova produit 10 000 casques par an, vendus 80 € à ses clients habituels. Un distributeur étranger propose d'en acheter 1 500 une seule fois, à 55 € pièce. Le contrôleur de gestion rappelle que le coût de revient complet d'un casque est de 70 €.",
+    free: [["Prix proposé", "55 € / casque"], ["Coût de revient complet", "70 € / casque"], ["Prix habituel", "80 €"]],
+    infos: [
+      {k:"cv", label:"Coût variable unitaire d'un casque", price:15, value:"45 €"},
+      {k:"cap", label:"Capacité de production disponible", price:15, value:"2 000 casques libres (usine utilisée à 10 000 sur 12 000)"},
+      {k:"cli", label:"Effet sur les clients habituels", price:10, value:"Aucun : marché étranger séparé"},
+      {k:"cf", label:"Charges fixes de l'usine", price:10, value:"250 000 € par an", trap:"elles ne changent pas avec la commande"},
+      {k:"mcv", label:"Marge sur coût variable de la commande (synthèse)", price:30, value:"+15 000 €"}
+    ],
+    type: "choice",
+    options: [
+      {k:"yes", label:"Accepter la commande", gain:200, result:"+15 000 €"},
+      {k:"no", label:"Refuser la commande", gain:-50, result:"0 €"}
+    ],
+    scale: "Barème : accepter +200 € · refuser −50 € · pas de décision 0 €.",
+    solution: "Accepter.",
+    correction: [
+      "La commande rapporte (55 − 45) × 1 500 = +15 000 € de marge sur coût variable.",
+      "L'usine a 2 000 casques de capacité libre : aucun investissement, les charges fixes ne bougent pas.",
+      "Le coût complet de 70 € est un piège : il contient 25 € de charges fixes par casque (250 000 ÷ 10 000), déjà couvertes par la production normale.",
+      "Pas d'effet sur les clients habituels : on accepte."
+    ]
+  },
+  {
+    title: "Une seule machine",
+    notion: "Facteur rare · marge par unité de ressource",
+    context: "L'atelier n'a qu'une machine, disponible 2 000 heures ce trimestre. Tout ce qui est produit est vendu. La direction veut consacrer la machine à un seul produit : le porte-bagages X, le garde-boue Y ou le siège enfant Z.",
+    free: [["Prix de vente X", "100 €"], ["Prix de vente Y", "70 €"], ["Prix de vente Z", "150 €"], ["Machine", "2 000 h"]],
+    infos: [
+      {k:"cvX", label:"Coût variable unitaire de X", price:10, value:"60 €"},
+      {k:"cvY", label:"Coût variable unitaire de Y", price:10, value:"40 €"},
+      {k:"cvZ", label:"Coût variable unitaire de Z", price:10, value:"90 €"},
+      {k:"hX", label:"Temps machine de X", price:10, value:"2 h par unité"},
+      {k:"hY", label:"Temps machine de Y", price:10, value:"1 h par unité"},
+      {k:"hZ", label:"Temps machine de Z", price:10, value:"4 h par unité"},
+      {k:"mu", label:"Marge unitaire des 3 produits", price:15, value:"X : 40 € · Y : 30 € · Z : 60 €", trap:"vraie, mais ce n'est pas le bon critère quand une ressource est limitée"},
+      {k:"mph", label:"Marge par heure-machine (synthèse)", price:35, value:"X : 20 €/h · Y : 30 €/h · Z : 15 €/h"},
+      {k:"cf", label:"Charges fixes de l'atelier", price:10, value:"35 000 €, quel que soit le produit", trap:"identiques pour les 3 choix, elles ne départagent rien"}
+    ],
+    type: "choice",
+    options: [
+      {k:"X", label:"Tout sur X (porte-bagages)", gain:50, result:"+5 000 €"},
+      {k:"Y", label:"Tout sur Y (garde-boue)", gain:300, result:"+25 000 €"},
+      {k:"Z", label:"Tout sur Z (siège enfant)", gain:-50, result:"−5 000 €"}
+    ],
+    scale: "Barème : Y +300 € · X +50 € (rentable mais pas optimal) · Z −50 € · pas de décision 0 €.",
+    solution: "Tout sur Y.",
+    correction: [
+      "La machine est le facteur rare : on compare la marge par heure-machine, pas la marge par produit.",
+      "X : 40 € ÷ 2 h = 20 €/h, soit 2 000 h × 20 = 40 000 € − 35 000 € = +5 000 €.",
+      "Y : 30 € ÷ 1 h = 30 €/h, soit 60 000 € − 35 000 € = +25 000 €.",
+      "Z : 60 € ÷ 4 h = 15 €/h, soit 30 000 € − 35 000 € = −5 000 €.",
+      "Z a la meilleure marge unitaire et la pire rentabilité."
+    ]
+  },
+  {
+    title: "Faire ou acheter ?",
+    notion: "Coûts pertinents · charges fixes non évitables",
+    context: "Vélonova fabrique elle-même 5 000 cadres par an. Un fournisseur propose de les livrer à 32 € pièce. Le coût de revient complet d'un cadre fabriqué en interne est de 36 €.",
+    free: [["Offre du fournisseur", "32 € / cadre"], ["Coût de revient complet interne", "36 € / cadre"], ["Volume", "5 000 cadres / an"]],
+    infos: [
+      {k:"cv", label:"Coût variable unitaire d'un cadre", price:10, value:"24 €"},
+      {k:"det", label:"Détail des 12 € de charges fixes par cadre", price:25, value:"8 € d'amortissement et d'encadrement (restent si on sous-traite) · 4 € de location d'atelier (résiliable)"},
+      {k:"evit", label:"Coût évitable par cadre (synthèse)", price:35, value:"28 €"},
+      {k:"loc", label:"Usage possible de l'atelier libéré", price:15, value:"Aucune demande : il resterait vide"},
+      {k:"qual", label:"Taux de défaut du fournisseur", price:10, value:"1 %, comme en interne", trap:"qualité identique, cela ne départage pas les deux options"}
+    ],
+    type: "choice",
+    options: [
+      {k:"make", label:"Continuer à fabriquer", gain:250, result:"20 000 € économisés"},
+      {k:"buy", label:"Acheter au fournisseur", gain:-50, result:"20 000 € de surcoût"}
+    ],
+    scale: "Barème : fabriquer +250 € · acheter −50 € · pas de décision 0 €.",
+    solution: "Continuer à fabriquer.",
+    correction: [
+      "Seuls les coûts qui disparaissent si on sous-traite comptent : 24 € de coût variable + 4 € de location résiliable = 28 € par cadre.",
+      "Fabriquer : 28 € × 5 000 = 140 000 €. Acheter : 32 € × 5 000 = 160 000 €. Fabriquer économise 20 000 €.",
+      "Les 8 € d'amortissement et d'encadrement restent même si on achète : comparer 36 € à 32 € mène à la mauvaise décision."
+    ]
+  },
+  {
+    title: "Appel d'offres",
+    notion: "Coût de revient d'une commande · prix plancher",
+    context: "Une région commande 2 000 kits d'éclairage. Les 4 équipes répondent avec un prix unitaire sous enveloppe. L'offre la plus basse remporte tout le marché. Prix maximum accepté : 70 € par kit. En cas d'égalité, la commande est partagée.",
+    free: [["Quantité", "2 000 kits"], ["Prix plafond", "70 € / kit"]],
+    infos: [
+      {k:"cv", label:"Coût variable unitaire d'un kit", price:15, value:"40 €"},
+      {k:"out", label:"Outillage à acheter pour cette commande", price:15, value:"20 000 €"},
+      {k:"cu", label:"Coût de revient unitaire de la commande (synthèse)", price:30, value:"50 € par kit"},
+      {k:"siege", label:"Frais de siège répartis sur la commande", price:10, value:"8 € par kit", trap:"frais qui existent déjà, commande gagnée ou non"}
+    ],
+    type: "bid",
+    bid: {max:70, qty:2000, unitCost:50, divisor:133.3333, maxLoss:50},
+    scale: "Gain du gagnant = (prix proposé − 50 €) × 15, soit jusqu'à +300 € à 70 €. Perte limitée à −50 € pour une offre sous le coût. Les autres : 0 €.",
+    solution: "Plancher à 50 € : toute offre gagnante au-dessus rapporte, en dessous elle fait perdre.",
+    correction: [
+      "Coût de la commande : 40 € × 2 000 + 20 000 € d'outillage = 100 000 €, soit 50 € par kit.",
+      "Les 8 € de frais de siège existent déjà : les ajouter pousse à proposer trop cher et à perdre le marché.",
+      "Une offre gagnante au-dessus de 50 € rapporte ; sous 50 €, chaque kit livré fait perdre de l'argent."
+    ]
+  }
+];
+
+/* ===================== État ===================== */
+const S = {
+  mode: "loading", fb: null, authUser: null, connected: false, isOwner: false, writeBlocked: false,
+  state: null, actions: {}, loaded: false, note: null, myTeam: null, view: "equipe",
+  bidDraft: "", nameDraft: "", renaming: false, resetArm: false, built: null
+};
+const LS_KEY = "marche-couts-local-v1";
+const TEAM_KEY = "marche-couts-team";
+
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nb = n => Math.abs(Math.round(n)).toLocaleString("fr-FR");
+const fmt = n => (n < 0 ? "−" : "") + nb(n) + " €";
+const signed = n => (n > 0 ? "+" : n < 0 ? "−" : "") + nb(n) + " €";
+const cls = n => n > 0 ? "up" : n < 0 ? "down" : "";
+
+function G(){ return S.state; }
+function teamName(t){
+  const g = G();
+  if (g){ const a = S.actions[`${g.gid}-name-t${t}`]; if (a && a.gid === g.gid && a.kind === "name" && a.name) return String(a.name).slice(0, 30); }
+  return (g && g.teams && g.teams[t]) || ("Équipe " + (t + 1));
+}
+function gameStarted(){ const g = G(); return !!g && g.phase !== "lobby"; }
+function acts(){ const g = G(); if (!g) return []; return Object.values(S.actions).filter(a => a && a.gid === g.gid); }
+function isRevealed(r){
+  const g = G(); if (!g) return false;
+  if (g.phase === "end") return true;
+  return r < g.round || (r === g.round && g.phase === "reveal");
+}
+function bought(t, r){ return acts().filter(a => a.kind === "buy" && a.team === t && a.round === r); }
+function decision(t, r){
+  const a = acts().find(a => a.kind === "decide" && a.team === t && a.round === r);
+  return a && a.choice !== null && a.choice !== undefined && a.choice !== "" ? a.choice : null;
+}
+function infoPrice(r, k){ const i = ROUNDS[r] && ROUNDS[r].infos.find(x => x.k === k); return i ? i.price : 0; }
+function roundGains(r){
+  const R = ROUNDS[r]; const out = [0,0,0,0];
+  if (R.type === "choice"){
+    for (let t = 0; t < 4; t++){ const o = R.options.find(o => o.k === decision(t, r)); out[t] = o ? o.gain : 0; }
+  } else {
+    const bids = [];
+    for (let t = 0; t < 4; t++){ const p = Number(decision(t, r)); if (p > 0 && p <= R.bid.max) bids.push([t, p]); }
+    if (bids.length){
+      const m = Math.min(...bids.map(b => b[1]));
+      const w = bids.filter(b => b[1] === m);
+      w.forEach(([t]) => { out[t] = Math.max(-R.bid.maxLoss, Math.round((m - R.bid.unitCost) * R.bid.qty / R.bid.divisor / w.length)); });
+    }
+  }
+  return out;
+}
+function spent(t){ return acts().filter(a => a.kind === "buy" && a.team === t).reduce((s, a) => s + infoPrice(a.round, a.key), 0); }
+function capital(t){
+  let c = START - spent(t);
+  for (let r = 0; r < ROUNDS.length; r++) if (isRevealed(r)) c += roundGains(r)[t];
+  return c;
+}
+function decisionLabel(r, c){
+  if (c === null) return "Pas de décision";
+  const R = ROUNDS[r];
+  if (R.type === "bid") return String(c).replace(".", ",") + " € / kit";
+  const o = R.options.find(o => o.k === c); return o ? o.label : "—";
+}
+function writable(){ return S.mode === "local" || S.isOwner || !!S.authUser; }
+function isHost(){ return S.mode === "local" || S.isOwner; }
+
+/* ===================== Écritures ===================== */
+function toast(msg){
+  const el = document.getElementById("toast"); el.textContent = msg; el.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(() => { el.hidden = true; }, 5000);
+}
+function handleErr(e, isAction){
+  const txt = String((e && (e.code || e.message)) || "");
+  if (/PERMISSION/i.test(txt)){
+    toast(isAction ? "Action refusée : cette info est peut-être déjà achetée, ou la connexion a expiré. Recharge la page." : "Action refusée : connecte-toi en animateur.");
+  } else {
+    toast("L'enregistrement a échoué. Vérifie la connexion et réessaie.");
+  }
+  render();
+}
+function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify({state:S.state, actions:S.actions})); } catch(e){} }
+function loadLocal(){ try { const d = JSON.parse(localStorage.getItem(LS_KEY) || "null"); if (d && d.state){ S.state = d.state; S.actions = d.actions || {}; } } catch(e){} }
+function newGame(teams){
+  return { gid: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), round: 0, phase: "lobby", endsAt: null,
+    teams: teams ? [...teams] : ["Équipe 1", "Équipe 2", "Équipe 3", "Équipe 4"] };
+}
+const clean = o => JSON.parse(JSON.stringify(o));
+function setState(next){
+  S.state = next;
+  if (S.mode === "local"){ saveLocal(); render(); return; }
+  render();
+  set(ref(S.fb.db, "game/state"), clean(next)).catch(e => handleErr(e, false));
+}
+function putAction(id, data){
+  if (S.mode === "local"){ S.actions = {...S.actions, [id]: data}; saveLocal(); render(); return; }
+  set(ref(S.fb.db, "actions/" + id), clean(data)).catch(e => handleErr(e, true));
+}
+
+/* ===================== Actions de jeu ===================== */
+function buy(k){
+  const g = G(), t = S.myTeam; if (!g || t === null || g.phase !== "play" || !writable()) return;
+  const r = g.round; const i = ROUNDS[r].infos.find(x => x.k === k); if (!i) return;
+  if (bought(t, r).some(a => a.key === k)) return;
+  if (capital(t) < i.price){ toast("Fonds insuffisants pour cette information."); return; }
+  putAction(`${g.gid}-r${r}-t${t}-${k}`, {gid:g.gid, round:r, team:t, kind:"buy", key:k, at:Date.now()});
+}
+function decide(choice){
+  const g = G(), t = S.myTeam; if (!g || t === null || g.phase !== "play" || !writable()) return;
+  if (decision(t, g.round) === choice) return;
+  putAction(`${g.gid}-r${g.round}-t${t}-decision`, {gid:g.gid, round:g.round, team:t, kind:"decide", choice, at:Date.now()});
+}
+function renameTeam(t, v){
+  const g = G(); if (!g || t === null || !writable()) return;
+  const name = String(v || "").trim().slice(0, 30);
+  if (!name){ toast("Le nom de l'équipe ne peut pas être vide."); return; }
+  if (name === teamName(t)) return;
+  putAction(`${g.gid}-name-t${t}`, {gid:g.gid, team:t, kind:"name", name, at:Date.now()});
+}
+function sendBid(){
+  const g = G(); if (!g) return; const R = ROUNDS[g.round];
+  const el = document.getElementById("bid-input"); const raw = (el ? el.value : S.bidDraft).replace(",", ".");
+  const p = Math.round(Number(raw) * 100) / 100;
+  if (!(p > 0)){ toast("Indique un prix supérieur à 0 €."); return; }
+  if (p > R.bid.max){ toast(`Le prix plafond est de ${R.bid.max} € : une offre au-dessus serait rejetée.`); return; }
+  decide(p);
+}
+
+/* ===================== Rendu ===================== */
+function patch(id, html){
+  const el = document.getElementById(id); if (!el) return false;
+  if (el._html === html) return false;
+  el._html = html; el.innerHTML = html; return true;
+}
+function teamStyle(t){ return `--tc:var(--t${t})`; }
+
+function boardHTML(){
+  const g = G();
+  const rows = [0,1,2,3].map(t => ({t, c: capital(t)})).sort((a, b) => b.c - a.c || a.t - b.t);
+  const max = Math.max(START, ...rows.map(r => r.c));
+  return `<ol class="board">${rows.map((r, i) => {
+    let st = "";
+    if (g && g.phase === "play"){
+      const n = bought(r.t, g.round).length; const d = decision(r.t, g.round) !== null;
+      st = `<span class="st"><span>${n} info${n > 1 ? "s" : ""} achetée${n > 1 ? "s" : ""}</span>${d ? '<span class="ok">Décision prise</span>' : "<span>En réflexion</span>"}</span>`;
+    } else if (g && (g.phase === "reveal") ){
+      const gain = roundGains(g.round)[r.t];
+      st = `<span class="st"><span>Cette manche : <b class="gain ${cls(gain)}">${signed(gain)}</b></span><span>Infos : ${fmt(-bought(r.t, g.round).reduce((s,a)=>s+infoPrice(a.round,a.key),0))}</span></span>`;
+    }
+    return `<li class="row" style="${teamStyle(r.t)}"><span class="rank">${i + 1}</span><span class="nm">${esc(teamName(r.t))}</span><span class="cap num ${r.c < START ? "down" : r.c > START ? "up" : ""}">${fmt(r.c)}</span><span class="barw"><i style="width:${Math.max(0, r.c) / max * 100}%"></i></span>${st}</li>`;
+  }).join("")}</ol>`;
+}
+function podiumHTML(){
+  const rows = [0,1,2,3].map(t => ({t, c: capital(t)})).sort((a, b) => b.c - a.c || a.t - b.t);
+  return `<div class="podium">${rows.map((r, i) => `<div style="${teamStyle(r.t)}"><span>${i + 1}. ${esc(teamName(r.t))}</span><span class="num ${cls(r.c - START)}">${fmt(r.c)}</span></div>`).join("")}</div>`;
+}
+function rulesHTML(){
+  return `<ul class="rules">
+    <li>Chaque équipe démarre avec <b class="num">1 000 €</b>.</li>
+    <li>À chaque manche, une situation d'entreprise. Certaines données sont gratuites, les autres s'achètent.</li>
+    <li>Une fois l'info en main, votre équipe prend une décision. Vous pouvez la changer jusqu'à la révélation.</li>
+    <li>À la révélation, la bonne décision rapporte de 200 à 300 €, une mauvaise décision coûte 50 €. Les infos achetées sont dépensées dans tous les cas.</li>
+    <li>Attention : certaines informations sont vraies mais inutiles, voire trompeuses.</li>
+  </ul>`;
+}
+function roundCardHTML(r, withContext){
+  const R = ROUNDS[r];
+  return `<div class="eyebrow">Manche ${r + 1} / ${ROUNDS.length} · ${esc(R.notion)}</div>
+    <h2 style="font-size:30px;margin-top:6px">${esc(R.title)}</h2>
+    ${withContext ? `<p class="lead" style="margin-top:10px">${esc(R.context)}</p>` : ""}
+    <div class="free">${R.free.map(([l, v]) => `<span>${esc(l)} : <b>${esc(v)}</b></span>`).join("")}</div>`;
+}
+function correctionHTML(r){
+  const R = ROUNDS[r];
+  return `<p style="margin-top:12px"><b>Bonne réponse : ${esc(R.solution)}</b></p>
+    <ul class="corr">${R.correction.map(c => `<li>${esc(c)}</li>`).join("")}</ul>
+    <p class="hint">${esc(R.scale)}</p>`;
+}
+function offersHTML(r){
+  const R = ROUNDS[r]; const gains = roundGains(r);
+  const list = [0,1,2,3].map(t => ({t, p: decision(t, r)})).sort((a, b) => (a.p === null) - (b.p === null) || Number(a.p) - Number(b.p));
+  return `<div class="offers">${list.map(o => `<div><span style="${teamStyle(o.t)}"><b style="color:var(--tc)">${esc(teamName(o.t))}</b></span><span class="num">${o.p === null ? "pas d'offre" : decisionLabel(r, o.p)}${Number(o.p) > R.bid.max ? " (rejetée)" : ""}</span><span class="gain num ${cls(gains[o.t])}">${signed(gains[o.t])}</span></div>`).join("")}</div>`;
+}
+
+/* ---------- Vue équipe ---------- */
+function teamView(){
+  if (S.built !== "equipe"){
+    document.getElementById("app").innerHTML = `<div class="stack"><section id="tv-top"></section>
+      <div class="cols"><div class="stack"><section class="card" id="tv-round"></section><section class="card" id="tv-market"></section><section class="card" id="tv-decide"></section></div>
+      <aside class="card"><div class="eyebrow">Classement en direct</div><div id="tv-board"></div></aside></div></div>`;
+    S.built = "equipe";
+  }
+  const g = G(); const t = S.myTeam;
+  const show = (id, on) => { const el = document.getElementById(id); if (el) el.hidden = !on; };
+
+  // En-tête équipe
+  let topReplaced = false;
+  if (t === null){
+    patch("tv-top", `<div class="card"><h2 style="font-size:30px">Choisissez votre équipe</h2>
+      <p class="muted" style="margin-top:6px">Un appareil par équipe suffit. Vous pourrez changer plus tard.</p>
+      <div class="pick">${[0,1,2,3].map(i => `<button data-act="pick" data-t="${i}" style="${teamStyle(i)}"><strong>${esc(teamName(i))}</strong><span class="num muted">${g ? fmt(capital(i)) : "1 000 €"}</span></button>`).join("")}</div></div>`);
+  } else {
+    const sw = isHost() ? `<div class="sw"><span class="muted" style="font-size:13px">Jouer pour :</span>${[0,1,2,3].map(i => `<button class="chip ${i === t ? "on" : ""}" style="${teamStyle(i)}" data-act="pick" data-t="${i}">${esc(teamName(i))}</button>`).join("")}</div>`
+      : gameStarted() ? `<span class="muted" style="font-size:13px">Équipe verrouillée pendant la partie</span>`
+      : `<button class="linkbtn" data-act="unpick">Changer d'équipe</button>`;
+    const nameZone = S.renaming && writable()
+      ? `<div class="bidrow" style="margin-top:6px"><label for="name-input" class="muted" style="font-size:13px">Nouveau nom</label><input id="name-input" maxlength="30" style="width:220px;font-family:var(--body);font-size:16px"><button class="btn" data-act="rename-save">Enregistrer</button><button class="linkbtn" data-act="rename-cancel">Annuler</button></div>`
+      : (writable() ? `<button class="linkbtn" data-act="rename">Renommer l'équipe</button>` : "");
+    const c = capital(t);
+    topReplaced = patch("tv-top", `<div class="card teamhead" style="${teamStyle(t)}"><div><div class="eyebrow">Votre équipe</div><h2>${esc(teamName(t))}</h2>${nameZone}</div>
+      <div><div class="eyebrow">Capital</div><div class="capbig num ${c < START ? "down" : c > START ? "up" : ""}">${fmt(c)}</div></div>
+      <div style="display:grid;gap:6px;justify-items:start">${sw}${S.mode === "live" && !writable() ? '<span class="down" style="font-size:13px">Lecture seule pour ce compte</span>' : ""}</div></div>`);
+    if (topReplaced){ const ni = document.getElementById("name-input"); if (ni){ ni.value = S.nameDraft; ni.focus(); } }
+  }
+  const ready = g && t !== null;
+  show("tv-round", !!g); show("tv-market", ready && g.phase !== "lobby" && g.phase !== "end"); show("tv-decide", ready && g.phase !== "lobby" && g.phase !== "end");
+  document.getElementById("tv-board").hidden = !g;
+  if (!g){
+    patch("tv-round", ""); return;
+  }
+  patch("tv-board", boardHTML());
+
+  if (g.phase === "lobby"){
+    patch("tv-round", `<div class="eyebrow">Avant-match</div><h2 style="font-size:30px;margin-top:6px">La partie va commencer</h2><p class="muted" style="margin-top:6px">L'animateur lance la première manche dans un instant. Les règles :</p>${rulesHTML()}`);
+    return;
+  }
+  if (g.phase === "end"){
+    patch("tv-round", `<div class="eyebrow">Partie terminée</div><h2 style="font-size:30px;margin-top:6px">Classement final</h2>${podiumHTML()}`);
+    return;
+  }
+  const r = g.round; const R = ROUNDS[r];
+  patch("tv-round", roundCardHTML(r, true));
+  if (t === null) return;
+
+  // Marché des informations
+  const own = new Set(bought(t, r).map(a => a.key)); const cap = capital(t); const open = g.phase === "play"; const rev = isRevealed(r);
+  const cards = R.infos.map(i => {
+    if (own.has(i.k)){
+      const trap = rev && i.trap;
+      return `<div class="info got ${trap ? "trap" : ""}" style="${teamStyle(t)}"><span class="lbl">${esc(i.label)}</span><span class="val">${esc(i.value)}</span><span class="meta">Payé ${i.price} €${trap ? ` · <b>Piège</b> : ${esc(i.trap)}` : ""}</span></div>`;
+    }
+    if (rev){
+      return `<div class="info seen"><span class="lbl">${esc(i.label)}</span><span class="val">${esc(i.value)}</span><span class="meta">Non achetée${i.trap ? ` · <b class="down">Piège</b> : ${esc(i.trap)}` : ""}</span></div>`;
+    }
+    const can = open && cap >= i.price && writable();
+    const cta = !open ? "Marché fermé" : !writable() ? "Lecture seule" : cap < i.price ? "Fonds insuffisants" : "Acheter";
+    return `<button class="info" data-act="buy" data-k="${i.k}" ${can ? "" : "disabled"}><span class="lbl">${esc(i.label)}</span><span class="price num">${i.price} €</span><span class="cta">${cta}</span></button>`;
+  }).join("");
+  const spentR = bought(t, r).reduce((s, a) => s + infoPrice(a.round, a.key), 0);
+  patch("tv-market", `<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline"><h3 style="font-size:22px">${rev ? "Toutes les informations" : "Acheter des informations"}</h3><span class="muted num" style="font-size:14px">Dépensé cette manche : ${nb(spentR)} €</span></div><div class="market">${cards}</div>`);
+
+  // Décision
+  const cur = decision(t, r);
+  let html = "";
+  if (rev){
+    const gain = roundGains(r)[t];
+    html = `<h3 style="font-size:22px">Résultat de la manche</h3>
+      <div class="result">Votre décision : <b>${esc(decisionLabel(r, cur))}</b> · Gain : <b class="gain num ${cls(gain)}">${signed(gain)}</b></div>
+      ${R.type === "bid" ? offersHTML(r) : ""}${correctionHTML(r)}`;
+  } else if (R.type === "choice"){
+    html = `<h3 style="font-size:22px">Votre décision</h3>
+      <div class="opts">${R.options.map(o => `<button class="opt ${cur === o.k ? "on" : ""}" style="${teamStyle(t)}" data-act="decide" data-k="${o.k}" ${open && writable() ? "" : "disabled"}>${esc(o.label)}</button>`).join("")}</div>
+      <p class="hint">${cur !== null ? `Décision enregistrée : <b>${esc(decisionLabel(r, cur))}</b>. Vous pouvez la changer jusqu'à la révélation.` : "Pas encore de décision. Sans décision, la manche rapporte 0 €."}</p>`;
+  } else {
+    html = `<h3 style="font-size:22px">Votre offre</h3>
+      <div class="bidrow"><label for="bid-input" class="muted" style="font-size:14px">Prix unitaire proposé (€)</label>
+      <input id="bid-input" type="number" inputmode="decimal" min="0" max="${R.bid.max}" step="0.5" ${open && writable() ? "" : "disabled"}>
+      <button class="btn" data-act="bid" ${open && writable() ? "" : "disabled"}>Envoyer l'offre</button>
+      ${cur !== null ? `<button class="btn alt" data-act="withdraw" ${open && writable() ? "" : "disabled"}>Retirer l'offre</button>` : ""}</div>
+      <p class="hint">${cur !== null ? `Offre enregistrée : <b class="num">${esc(decisionLabel(r, cur))}</b>. Les autres équipes ne la voient pas avant la révélation.` : "Pas encore d'offre. Sans offre, la manche rapporte 0 €."}</p>`;
+  }
+  const replaced = patch("tv-decide", html);
+  if (replaced){
+    const inp = document.getElementById("bid-input");
+    if (inp) inp.value = S.bidDraft !== "" ? S.bidDraft : (cur !== null ? cur : "");
+  }
+}
+
+/* ---------- Écran projeté ---------- */
+function projView(){
+  if (S.built !== "ecran"){
+    document.getElementById("app").innerHTML = `<div class="proj"><section id="pj-head"></section><div class="cols" style="grid-template-columns:minmax(0,1fr)"><section class="card" id="pj-board"></section><section class="card" id="pj-detail"></section></div></div>`;
+    S.built = "ecran";
+  }
+  const g = G();
+  if (!g){ patch("pj-head", `<h1>En attente de la partie</h1>`); patch("pj-board", ""); patch("pj-detail", ""); return; }
+  let title = "Avant-match", sub = "Choisissez votre équipe sur vos appareils";
+  if (g.phase === "end"){ title = "Classement final"; sub = "Partie terminée"; }
+  else if (g.phase !== "lobby"){ title = ROUNDS[g.round].title; sub = `Manche ${g.round + 1} / ${ROUNDS.length} · ${g.phase === "play" ? "Marché ouvert" : "Résultats"}`; }
+  patch("pj-head", `<div class="projhead"><div><div class="eyebrow" style="font-size:15px">${esc(sub)}</div><h1>${esc(title)}</h1></div><div class="timer js-timer" aria-live="off"></div></div>`);
+  patch("pj-board", g.phase === "end" ? podiumHTML() : boardHTML());
+  const detail = document.getElementById("pj-detail");
+  if (g.phase === "lobby"){
+    detail.hidden = false;
+    const url = location.href.split("#")[0];
+    const replaced = patch("pj-detail", `<div style="display:flex;flex-wrap:wrap;gap:24px 40px;align-items:flex-start"><div style="flex:1;min-width:280px"><h3 style="font-size:24px">Règles</h3>${rulesHTML()}</div>
+      <div style="display:grid;gap:10px;justify-items:center"><div id="qr" style="background:#fff;padding:12px;border-radius:8px"></div><span class="num" style="font-size:14px;overflow-wrap:anywhere;max-width:260px;text-align:center">${esc(url)}</span><span class="muted" style="font-size:14px">Scannez pour rejoindre la partie</span></div></div>`);
+    if (replaced && window.QRCode){ try { new window.QRCode(document.getElementById("qr"), {text: url, width: 220, height: 220}); } catch(e){} }
+  }
+  else if (g.phase === "play"){ detail.hidden = false; patch("pj-detail", roundCardHTML(g.round, true)); }
+  else if (g.phase === "reveal"){
+    detail.hidden = false;
+    const R = ROUNDS[g.round];
+    const decs = R.type === "bid" ? offersHTML(g.round) : `<div class="offers">${[0,1,2,3].map(t => { const gain = roundGains(g.round)[t]; return `<div><b style="color:var(--t${t})">${esc(teamName(t))}</b><span>${esc(decisionLabel(g.round, decision(t, g.round)))}</span><span class="gain num ${cls(gain)}">${signed(gain)}</span></div>`; }).join("")}</div>`;
+    patch("pj-detail", `<h3 style="font-size:24px">Décisions des équipes</h3>${decs}${correctionHTML(g.round)}`);
+  } else { detail.hidden = true; patch("pj-detail", ""); }
+  tickTimer();
+}
+
+/* ---------- Animateur ---------- */
+function hostView(){
+  if (S.built !== "animateur"){
+    document.getElementById("app").innerHTML = `<div class="stack"><section class="card" id="an-ctrl"></section><section class="card" id="an-names"></section><section class="card" id="an-teams"></section><section class="card" id="an-key"></section></div>`;
+    S.built = "animateur";
+  }
+  if (!isHost()){
+    patch("an-ctrl", `<div class="eyebrow">Accès animateur</div><h2 style="font-size:26px;margin-top:6px">Connexion</h2>
+      <p class="muted" style="margin-top:6px">Réservé à la personne qui anime la partie. Les joueurs utilisent la vue Équipe.</p>
+      <div class="names" style="max-width:640px"><label for="login-email">Adresse e-mail<input id="login-email" type="email" autocomplete="username" style="border-left-width:2px"></label>
+      <label for="login-pass">Mot de passe<input id="login-pass" type="password" autocomplete="current-password" style="border-left-width:2px"></label></div>
+      <div class="ctrl"><button class="btn" data-act="login">Se connecter</button></div>`);
+    patch("an-teams", ""); patch("an-key", ""); patch("an-names", "");
+    document.getElementById("an-teams").hidden = true; document.getElementById("an-key").hidden = true; document.getElementById("an-names").hidden = true; return;
+  }
+  document.getElementById("an-teams").hidden = false;
+  const g = G();
+  if (!g){
+    patch("an-ctrl", `<h2 style="font-size:26px">Aucune partie en cours</h2><div class="ctrl"><button class="btn" data-act="create">Créer la partie</button></div>`);
+    patch("an-teams", ""); document.getElementById("an-key").hidden = true; document.getElementById("an-names").hidden = true; return;
+  }
+  let main = "", status = "";
+  if (g.phase === "lobby"){ status = "Avant-match : les équipes choisissent leur appareil."; main = `<button class="btn" data-act="start">Lancer la manche 1</button>`; }
+  else if (g.phase === "play"){ status = `Manche ${g.round + 1} / ${ROUNDS.length} en cours : ${ROUNDS[g.round].title}`; main = `<button class="btn" data-act="reveal">Révéler les résultats</button>`; }
+  else if (g.phase === "reveal"){ status = `Résultats de la manche ${g.round + 1} affichés.`; main = g.round + 1 < ROUNDS.length ? `<button class="btn" data-act="next">Lancer la manche ${g.round + 2}</button>` : `<button class="btn" data-act="next">Afficher le classement final</button>`; }
+  else { status = "Partie terminée."; main = ""; }
+  const timerBtns = g.phase === "play" ? `<button class="btn alt" data-act="timer" data-m="3">Chrono 3 min</button><button class="btn alt" data-act="timer" data-m="5">Chrono 5 min</button>${g.endsAt ? `<button class="btn alt" data-act="timerstop">Arrêter le chrono</button>` : ""}<span class="num js-timer" style="font-size:20px"></span>` : "";
+  const reset = S.resetArm ? `<button class="btn warn" data-act="reset">Confirmer : tout remettre à zéro</button><button class="linkbtn" data-act="resetcancel">Annuler</button>` : `<button class="btn alt" data-act="resetarm">Nouvelle partie</button>`;
+  patch("an-ctrl", `<div class="eyebrow">Pilotage</div><h2 style="font-size:26px;margin-top:6px">${esc(status)}</h2>
+    <div class="ctrl">${main}${timerBtns}</div>
+    <div class="ctrl" style="border-top:1px solid var(--line);padding-top:14px">${reset}<a class="linkbtn" href="#ecran">Ouvrir l'écran à projeter</a><a class="linkbtn" href="#equipe">Jouer pour une équipe</a></div>
+    ${S.mode === "live" ? `<p class="hint">Partie en direct : les joueurs ouvrent le lien (ou scannent le QR code de l'écran projeté) sur leur téléphone. Tu peux aussi jouer pour une équipe depuis la vue Équipe. <button class="linkbtn" data-act="logout">Se déconnecter</button></p>` : `<p class="hint">Mode un seul écran : la partie est enregistrée sur cet appareil. Saisissez les achats et décisions des équipes depuis la vue Équipe.</p>`}`);
+
+  document.getElementById("an-names").hidden = false;
+  patch("an-names", `<h3 style="font-size:22px">Noms des équipes</h3><div class="names">${[0,1,2,3].map(i => `<label for="tn-${i}" style="${teamStyle(i)}">Équipe ${i + 1}<input id="tn-${i}" data-team-name="${i}" maxlength="30" value="${esc(teamName(i))}"></label>`).join("")}</div><p class="hint">Modifiables à tout moment. Un nom s'enregistre quand vous quittez le champ. Les équipes peuvent aussi se renommer elles-mêmes.</p>`);
+  if (g.phase === "lobby"){
+    document.getElementById("an-teams").hidden = true; patch("an-teams", "");
+  } else if (g.phase === "end"){
+    document.getElementById("an-teams").hidden = false;
+    patch("an-teams", `<h3 style="font-size:22px">Classement final</h3>${podiumHTML()}`);
+  } else {
+    document.getElementById("an-teams").hidden = false;
+    const r = g.round; const gains = roundGains(r);
+    patch("an-teams", `<h3 style="font-size:22px">Suivi des équipes · manche ${r + 1}</h3><div class="tw"><table class="tbl"><thead><tr><th>Équipe</th><th>Infos achetées</th><th>Décision</th><th>Gain</th><th>Capital</th></tr></thead><tbody>
+      ${[0,1,2,3].map(t => { const b = bought(t, r); return `<tr><td><b style="color:var(--t${t})">${esc(teamName(t))}</b></td><td>${b.length ? b.map(a => { const i = ROUNDS[r].infos.find(x => x.k === a.key); return esc(i ? i.label : a.key) + (i && i.trap ? ' <span class="down">(piège)</span>' : ""); }).join("<br>") : '<span class="muted">aucune</span>'}</td><td>${esc(decisionLabel(r, decision(t, r)))}</td><td class="num ${isRevealed(r) ? cls(gains[t]) : ""}">${isRevealed(r) ? signed(gains[t]) : `<span class="muted">si révélé : ${signed(gains[t])}</span>`}</td><td class="num">${fmt(capital(t))}</td></tr>`; }).join("")}
+      </tbody></table></div>`);
+  }
+  const keyEl = document.getElementById("an-key");
+  if (g.phase === "play" || g.phase === "reveal"){
+    keyEl.hidden = false;
+    patch("an-key", `<div class="eyebrow">Corrigé · visible par vous seul</div>${roundCardHTML(g.round, false)}${correctionHTML(g.round)}`);
+  } else { keyEl.hidden = true; patch("an-key", ""); }
+  tickTimer();
+}
+
+/* ---------- Cadre ---------- */
+function render(){
+  const g = G();
+  const dot = document.getElementById("dot");
+  dot.className = "dot" + (S.mode === "live" && S.connected ? " on" : "");
+  let tk = "Connexion à la partie…";
+  if (S.loaded){
+    if (!g) tk = "En attente de l'animateur";
+    else if (g.phase === "lobby") tk = "Avant-match";
+    else if (g.phase === "end") tk = "Partie terminée";
+    else tk = `Manche ${g.round + 1}/${ROUNDS.length} · ${ROUNDS[g.round].title} · ${g.phase === "play" ? "Marché ouvert" : "Résultats"}`;
+  }
+  document.getElementById("ticker").textContent = tk;
+  document.getElementById("mode").textContent = S.mode === "live" ? "En direct" : S.mode === "local" ? "Un seul écran" : "Connexion…";
+  const links = [["equipe", "Équipe"], ["ecran", "Écran projeté"]];
+  if (isHost() || S.view === "animateur") links.push(["animateur", "Animateur"]);
+  const nav = links.map(([h, l]) => `<a href="#${h}" ${S.view === h ? 'aria-current="page"' : ""}>${l}</a>`).join("");
+  const navEl = document.getElementById("nav"); if (navEl._html !== nav){ navEl._html = nav; navEl.innerHTML = nav; }
+
+  let note = "";
+  if (S.mode === "loading") note = `<div><span>Connexion à la partie en direct…</span><button class="btn alt" data-act="local">Jouer sur un seul écran</button></div>`;
+  else if (S.note) note = `<div><span>${esc(S.note)}</span></div>`;
+  else if (S.mode === "live" && S.loaded && !S.connected) note = `<div><span>Connexion perdue. Les scores reprendront dès le retour du réseau.</span></div>`;
+  patch("note", note);
+
+  if (S.mode === "loading" && !S.loaded){
+    if (S.built !== "loading"){ document.getElementById("app").innerHTML = `<div class="card"><div class="eyebrow">Le Marché des coûts</div><h2 style="font-size:30px;margin-top:6px">Chargement de la partie</h2>${rulesHTML()}</div>`; S.built = "loading"; }
+    return;
+  }
+  if (S.view === "ecran") projView();
+  else if (S.view === "animateur") hostView();
+  else teamView();
+}
+
+function fmtTime(ms){ const s = Math.max(0, Math.ceil(ms / 1000)); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); }
+function tickTimer(){
+  const g = G(); const els = document.querySelectorAll(".js-timer");
+  els.forEach(el => {
+    let txt = ""; let late = false;
+    if (g && g.phase === "play" && g.endsAt){ const left = g.endsAt - now(); late = left <= 0; txt = late ? "Temps écoulé" : fmtTime(left); }
+    if (el.textContent !== txt) el.textContent = txt;
+    el.classList.toggle("late", late);
+  });
+}
+setInterval(tickTimer, 500);
+
+function route(){
+  const h = (location.hash || "").replace("#", "");
+  S.view = ["equipe", "ecran", "animateur"].includes(h) ? h : "equipe";
+  render();
+}
+window.addEventListener("hashchange", route);
+
+/* ===================== Événements ===================== */
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b || b.disabled) return;
+  const a = b.dataset.act; const g = G();
+  if (a === "pick"){ if (S.myTeam !== null && gameStarted() && !isHost()) return; S.renaming = false; S.myTeam = Number(b.dataset.t); S.bidDraft = ""; try { localStorage.setItem(TEAM_KEY, String(S.myTeam)); } catch(err){} render(); }
+  else if (a === "unpick"){ if (gameStarted() && !isHost()){ toast("Impossible de changer d'équipe pendant la partie."); return; } S.myTeam = null; try { localStorage.removeItem(TEAM_KEY); } catch(err){} render(); }
+  else if (a === "buy") buy(b.dataset.k);
+  else if (a === "decide") decide(b.dataset.k);
+  else if (a === "bid") sendBid();
+  else if (a === "rename"){ S.renaming = true; S.nameDraft = teamName(S.myTeam); render(); }
+  else if (a === "rename-cancel"){ S.renaming = false; render(); }
+  else if (a === "rename-save"){ const ni = document.getElementById("name-input"); renameTeam(S.myTeam, ni ? ni.value : S.nameDraft); S.renaming = false; render(); }
+  else if (a === "withdraw"){ S.bidDraft = ""; decide(null); }
+  else if (a === "local") startLocal("Mode un seul écran : la partie est enregistrée sur cet appareil.");
+  else if (a === "login") login();
+  else if (a === "logout"){ if (S.fb) signOut(S.fb.auth).catch(() => {}); }
+  else if (!isHost()) return;
+  else if (a === "create") setState(newGame());
+  else if (a === "start" && g) setState({...g, phase:"play", round:0, endsAt:null});
+  else if (a === "reveal" && g) setState({...g, phase:"reveal", endsAt:null});
+  else if (a === "next" && g){ S.bidDraft = ""; setState(g.round + 1 < ROUNDS.length ? {...g, round:g.round + 1, phase:"play", endsAt:null} : {...g, phase:"end", endsAt:null}); }
+  else if (a === "timer" && g) setState({...g, endsAt: now() + Number(b.dataset.m) * 60000});
+  else if (a === "timerstop" && g) setState({...g, endsAt:null});
+  else if (a === "resetarm"){ S.resetArm = true; render(); }
+  else if (a === "resetcancel"){ S.resetArm = false; render(); }
+  else if (a === "reset") resetGame();
+});
+document.addEventListener("input", e => { if (e.target.id === "bid-input") S.bidDraft = e.target.value; if (e.target.id === "name-input") S.nameDraft = e.target.value; });
+document.addEventListener("keydown", e => {
+  if (e.target.id === "bid-input" && e.key === "Enter"){ e.preventDefault(); sendBid(); }
+  if (e.target.id === "login-pass" && e.key === "Enter"){ e.preventDefault(); login(); }
+  if (e.target.id === "name-input" && e.key === "Enter"){ e.preventDefault(); renameTeam(S.myTeam, e.target.value); S.renaming = false; render(); }
+  if (e.target.id === "name-input" && e.key === "Escape"){ S.renaming = false; render(); }
+});
+document.addEventListener("change", e => {
+  const el = e.target; if (!el.matches || !el.matches("[data-team-name]") || !isHost()) return;
+  const g = G(); if (!g) return;
+  renameTeam(Number(el.dataset.teamName), el.value);
+});
+async function resetGame(){
+  S.resetArm = false; S.bidDraft = "";
+  const names = [0,1,2,3].map(teamName);
+  if (S.mode === "local"){ S.actions = {}; setState(newGame(names)); return; }
+  setState(newGame(names));
+  try { await remove(ref(S.fb.db, "actions")); } catch(e){ handleErr(e, false); }
+}
+async function login(){
+  if (!S.fb) return;
+  const email = (document.getElementById("login-email") || {}).value || "";
+  const pass = (document.getElementById("login-pass") || {}).value || "";
+  if (!email || !pass){ toast("Indique ton e-mail et ton mot de passe."); return; }
+  try { await signInWithEmailAndPassword(S.fb.auth, email.trim(), pass); toast("Connecté en animateur."); }
+  catch(e){ toast("Connexion refusée : e-mail ou mot de passe incorrect."); }
+}
+
+/* ===================== Démarrage ===================== */
+function startLocal(msg){
+  if (S.mode === "live") return;
+  S.mode = "local"; S.isOwner = true; S.writeBlocked = false; S.note = msg || null;
+  loadLocal(); if (!S.state){ S.state = newGame(); saveLocal(); }
+  S.loaded = true; S.built = null; render();
+}
+function init(){
+  try { const v = localStorage.getItem(TEAM_KEY); if (v !== null && v !== "") S.myTeam = Number(v); } catch(e){}
+  route();
+  if (!FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey === "COLLER_ICI"){
+    startLocal("Configuration Firebase manquante : la partie se joue sur cet appareil uniquement."); return;
+  }
+  let app;
+  try { app = initializeApp(FIREBASE_CONFIG); } catch(e){ startLocal("Configuration Firebase invalide : mode un seul écran."); return; }
+  const auth = getAuth(app); const db = getDatabase(app);
+  S.fb = {auth, db}; S.mode = "live";
+  onAuthStateChanged(auth, u => {
+    S.authUser = u;
+    S.isOwner = !!u && !u.isAnonymous && u.uid === ADMIN_UID;
+    if (!u) signInAnonymously(auth).catch(() => { S.note = "Connexion impossible : la connexion anonyme doit être activée dans Firebase."; render(); });
+    S.built = null; render();
+  });
+  const timer = setTimeout(() => { if (!S.loaded){ S.note = "La partie ne répond pas encore. Vérifie la connexion internet."; S.loaded = true; render(); } }, 10000);
+  onValue(ref(db, ".info/serverTimeOffset"), s => { OFFSET = Number(s.val()) || 0; });
+  onValue(ref(db, ".info/connected"), s => { S.connected = !!s.val(); render(); });
+  onValue(ref(db, "game/state"), s => {
+    clearTimeout(timer); if (S.note && S.note.startsWith("La partie ne répond")) S.note = null;
+    S.loaded = true; S.state = s.val(); render();
+  }, () => { clearTimeout(timer); S.loaded = true; S.note = "Lecture de la partie refusée : vérifie les règles de la base Firebase."; render(); });
+  onValue(ref(db, "actions"), s => { S.actions = s.val() || {}; render(); }, () => { S.note = "Lecture des équipes refusée : vérifie les règles de la base Firebase."; render(); });
+  S.built = null; render();
+}
+init();
+</script>
+</body>
+</html>
