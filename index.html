@@ -397,8 +397,8 @@ const ROUNDS = [
       {k:"siege", label:"Frais de siège répartis sur la commande", price:10, value:"8 € par kit", trap:"frais qui existent déjà, commande gagnée ou non"}
     ],
     type: "bid",
-    bid: {max:70, qty:2000, unitCost:50, divisor:133.3333, maxLoss:50},
-    scale: "Gain du gagnant = (prix proposé − 50 €) × 15, soit jusqu'à +300 € à 70 €. Perte limitée à −50 € pour une offre sous le coût. Les autres : 0 €.",
+    bid: {max:70, qty:2000, unitCost:50, divisor:100, maxLoss:50},
+    scale: "Gain du gagnant = (prix proposé − 50 €) × 20, soit jusqu'à +400 € à 70 €. Perte limitée à −50 € pour une offre sous le coût. Les autres : 0 €.",
     solution: "Plancher à 50 € : toute offre gagnante au-dessus rapporte, en dessous elle fait perdre.",
     correction: [
       "Coût de la commande : 40 € × 2 000 + 20 000 € d'outillage = 100 000 €, soit 50 € par kit.",
