@@ -329,6 +329,63 @@ const ROUNDS = [
     ]
   },
   {
+    title: "Quel prix pour la table ?",
+    notion: "Centres d'analyse · unités d'œuvre · coût de revient complet",
+    context: "Vélonova fabrique aussi du mobilier de jardin : tables et chaises, 6 000 produits par an au total. Un client veut acheter 500 tables et paiera au plus 150 € pièce. Vous devez fixer le prix pour couvrir le coût de revient complet d'une table. Les charges indirectes sont réparties en trois centres d'analyse.",
+    free: [["Commande", "500 tables"], ["Prix maximum du client", "150 € / table"], ["Charges indirectes", "Approvisionnement, Atelier, Distribution"]],
+    infos: [
+      {k:"mat", label:"Matière consommée par table", price:10, value:"20 kg à 1,50 €/kg"},
+      {k:"mod", label:"Main-d'œuvre directe par table", price:10, value:"1 h à 25 €/h"},
+      {k:"appro", label:"Centre Approvisionnement", price:15, value:"40 000 € pour 100 000 kg de matière achetée (unité d'œuvre : le kg)"},
+      {k:"atel", label:"Centre Atelier", price:15, value:"228 000 € pour 6 000 heures-machine (unité d'œuvre : l'heure-machine) ; une table = 1,5 h"},
+      {k:"dist", label:"Centre Distribution", price:10, value:"30 000 € pour 6 000 produits vendus (unité d'œuvre : le produit vendu)"},
+      {k:"cr", label:"Coût de revient complet d'une table (synthèse)", price:35, value:"125 €"},
+      {k:"moy", label:"Charges indirectes moyennes par produit", price:15, value:"≈ 50 € (298 000 € ÷ 6 000 produits)", trap:"une moyenne ignore ce que chaque produit consomme vraiment dans chaque centre"}
+    ],
+    type: "choice",
+    options: [
+      {k:"p110", label:"Vendre 110 € la table", gain:-50, result:"−7 500 € (15 € de perte par table)"},
+      {k:"p135", label:"Vendre 135 € la table", gain:250, result:"+5 000 € (10 € de marge par table)"},
+      {k:"p155", label:"Vendre 155 € la table", gain:-50, result:"Commande perdue : au-dessus du prix maximum"}
+    ],
+    scale: "Barème : 135 € +250 € · 110 € ou 155 € −50 € · pas de décision 0 €.",
+    solution: "Vendre 135 € la table.",
+    correction: [
+      "Coûts directs : matière 20 kg × 1,50 € = 30 € ; main-d'œuvre 1 h × 25 € = 25 €.",
+      "Coût de l'unité d'œuvre de chaque centre : Approvisionnement 40 000 ÷ 100 000 kg = 0,40 €/kg ; Atelier 228 000 ÷ 6 000 h = 38 €/h ; Distribution 30 000 ÷ 6 000 = 5 € par produit.",
+      "Imputation à une table : 20 kg × 0,40 = 8 € ; 1,5 h × 38 = 57 € ; distribution 5 €.",
+      "Coût de revient complet : 30 + 25 + 8 + 57 + 5 = 125 €. À 135 €, chaque table rapporte 10 €, soit +5 000 € sur la commande.",
+      "Piège : avec la moyenne de 50 € par produit, on croit que la table coûte 105 € et qu'on gagne de l'argent à 110 €. En réalité, la table utilise beaucoup l'atelier (1,5 h) et coûte 125 €."
+    ]
+  },
+  {
+    title: "Standard ou sur-mesure ?",
+    notion: "Méthode ABC · inducteurs de coûts",
+    context: "Vélonova vend 9 000 vélos Standard et 1 000 vélos Sur-mesure par an. Les deux demandent 1 h de main-d'œuvre directe. Il y a 500 000 € de charges indirectes. La direction veut augmenter la production d'une seule gamme l'an prochain et hésite.",
+    free: [["Standard", "300 € de prix, 200 € de coûts directs"], ["Sur-mesure", "450 € de prix, 300 € de coûts directs"], ["Charges indirectes", "500 000 €"]],
+    infos: [
+      {k:"trad", label:"Coût indirect par vélo, méthode traditionnelle (au prorata des heures de main-d'œuvre)", price:15, value:"50 € pour chaque vélo : marge Standard 50 €, Sur-mesure 100 €", trap:"une répartition au volume ignore le coût de la complexité du sur-mesure"},
+      {k:"lots", label:"Activité Lancements de production", price:15, value:"200 000 € pour 100 lots : Standard 20 lots, Sur-mesure 80 lots"},
+      {k:"cmd", label:"Activité Gestion des commandes", price:15, value:"150 000 € pour 500 commandes : Standard 100, Sur-mesure 400"},
+      {k:"usin", label:"Activité Usinage", price:15, value:"150 000 € pour 10 000 heures-machine : Standard 9 000 h, Sur-mesure 1 000 h"},
+      {k:"abc", label:"Coût indirect par vélo en méthode ABC (synthèse)", price:35, value:"Standard : 22,78 € · Sur-mesure : 295 €"}
+    ],
+    type: "choice",
+    options: [
+      {k:"std", label:"Développer le Standard", gain:250, result:"Marge ABC : +77 € par vélo"},
+      {k:"sm", label:"Développer le Sur-mesure", gain:-50, result:"Marge ABC : −145 € par vélo"}
+    ],
+    scale: "Barème : Standard +250 € · Sur-mesure −50 € · pas de décision 0 €.",
+    solution: "Développer le Standard.",
+    correction: [
+      "Coût de chaque inducteur : 200 000 ÷ 100 lots = 2 000 € par lot ; 150 000 ÷ 500 = 300 € par commande ; 150 000 ÷ 10 000 h = 15 € par heure-machine.",
+      "Standard : 20 lots × 2 000 + 100 commandes × 300 + 9 000 h × 15 = 205 000 €, soit 22,78 € par vélo. Marge : 300 − 200 − 22,78 = +77 €.",
+      "Sur-mesure : 80 × 2 000 + 400 × 300 + 1 000 × 15 = 295 000 €, soit 295 € par vélo. Marge : 450 − 300 − 295 = −145 €.",
+      "La méthode traditionnelle donnait 50 € à chaque vélo et faisait croire que le sur-mesure était le plus rentable (100 € contre 50 €).",
+      "La méthode ABC montre que le sur-mesure consomme beaucoup de lancements et de commandes : développé tel quel, il fait perdre de l'argent."
+    ]
+  },
+  {
     title: "Appel d'offres",
     notion: "Coût de revient d'une commande · prix plancher",
     context: "Une région commande 2 000 kits d'éclairage. Les 4 équipes répondent avec un prix unitaire sous enveloppe. L'offre la plus basse remporte tout le marché. Prix maximum accepté : 70 € par kit. En cas d'égalité, la commande est partagée.",
