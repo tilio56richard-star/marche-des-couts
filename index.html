@@ -397,8 +397,8 @@ const ROUNDS = [
       {k:"siege", label:"Frais de siège répartis sur la commande", price:10, value:"8 € par kit", trap:"frais qui existent déjà, commande gagnée ou non"}
     ],
     type: "bid",
-    bid: {max:70, qty:2000, unitCost:50, divisor:100, maxLoss:50},
-    scale: "Gain du gagnant = (prix proposé − 50 €) × 20, soit jusqu'à +400 € à 70 €. Perte limitée à −50 € pour une offre sous le coût. Les autres : 0 €.",
+    bid: {max:70, qty:2000, unitCost:50, divisor:100, maxLoss:50, minWin:100},
+    scale: "Gain du gagnant = (prix proposé − 50 €) × 20, avec un minimum de +100 € et jusqu'à +400 € à 70 €. Perte limitée à −50 € pour une offre sous le coût. Les autres : 0 €.",
     solution: "Plancher à 50 € : toute offre gagnante au-dessus rapporte, en dessous elle fait perdre.",
     correction: [
       "Coût de la commande : 40 € × 2 000 + 20 000 € d'outillage = 100 000 €, soit 50 € par kit.",
@@ -472,7 +472,7 @@ function roundGains(r){
     if (bids.length){
       const m = Math.min(...bids.map(b => b[1]));
       const w = bids.filter(b => b[1] === m);
-      w.forEach(([t]) => { out[t] = Math.max(-R.bid.maxLoss, Math.round((m - R.bid.unitCost) * R.bid.qty / R.bid.divisor / w.length)); });
+      w.forEach(([t]) => { const raw = Math.round((m - R.bid.unitCost) * R.bid.qty / R.bid.divisor / w.length); out[t] = m >= R.bid.unitCost ? Math.max(R.bid.minWin || 0, raw) : Math.max(-R.bid.maxLoss, raw); });
     }
   }
   return out;
